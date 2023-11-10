@@ -1,3 +1,36 @@
+Metadata-Version: 2.1
+Name: sklearn-contrib-py-earth
+Version: python3.9
+Summary: A Python implementation of Jerome Friedman's Multivariate Adaptive Regression Splines.
+Download-URL: https://github.com/scikit-learn-contrib/py-earth/archive/0.1.tar.gz
+Author: Jason Rudy
+Author-email: jcrudy@gmail.com
+License: LICENSE.txt
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: BSD License
+Classifier: Development Status :: 3 - Alpha
+Classifier: Operating System :: MacOS
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Operating System :: POSIX
+Classifier: Operating System :: Unix
+Classifier: Programming Language :: Cython
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 2
+Classifier: Programming Language :: Python :: 2.6
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.4
+Classifier: Programming Language :: Python :: 3.5
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Topic :: Scientific/Engineering
+Classifier: Topic :: Software Development
+Provides-Extra: docs
+Provides-Extra: dev
+Provides-Extra: export
+Provides-Extra: all_tests
+License-File: LICENSE.txt
+
 py-earth [![Build Status](https://travis-ci.org/scikit-learn-contrib/py-earth.png?branch=master)](https://travis-ci.org/scikit-learn-contrib/py-earth?branch=master)
 ========
 
