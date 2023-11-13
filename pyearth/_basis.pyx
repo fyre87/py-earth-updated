@@ -886,8 +886,15 @@ cdef class LinearBasisFunction(DataVariableBasisFunction):
     def __str__(LinearBasisFunction self):
         result = self.label
         if not self.parent.__class__ is ConstantBasisFunction:
-            parent = str(self.parent)
-            result += '*' + parent
+            try:
+                parent = str(self.parent)
+                result += '*' + parent
+            except:
+                print("Could not concat the following thigns together (no int and string togehter): ")
+                print("parent: ", parent)
+                print("result: ", result)
+                print('*')
+                raise ValueError("BAD CONCAT")
         return result
 
     def eval(LinearBasisFunction self, x):

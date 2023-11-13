@@ -30,7 +30,6 @@ cdef class UpdatingQT:
     cpdef void update_qt(UpdatingQT self, bint dependent):
         # Assume that householder has already been updated and now Q_t needs to be updated
         # accordingly
-
         # Zero out the new row of Q_t
         cdef FLOAT_t zero = 0.
         cdef int zero_int = 0
@@ -45,6 +44,7 @@ cdef class UpdatingQT:
             # In general self.householder.k <= self.k + 1.
             # They are not necessarily equal.
             self.Q_t[self.k, self.householder.k - 1] = 1.
+            #print("Did Q_t transformation")
 
             # Apply the householder transformation
             self.householder.right_apply_transpose(self.Q_t[self.k:self.k+1, :])
@@ -55,15 +55,17 @@ cdef class UpdatingQT:
     cpdef void update(UpdatingQT self, FLOAT_t[:] x):
         # Updates householder, then calls
         # update_qt
-
         # The Householder will detect if the new vector is linearly dependent on the previous
         # ones (within numerical precision specified by zero_tol).
         cdef bint dependent
         dependent = self.householder.update_from_column(x)
 
+
         # Mark the column as independent or dependent.  This information will be needed if the
         # column is ever downdated, since we then need to not downdate householder
         self.dependent_cols[self.k] = dependent
+
+        #print("Marked Column")
 
         # If linear dependence was detected, the householder will have failed to update
         # (as it should).  In that case, we want a row of zeros in our Q_t matrix because
@@ -71,7 +73,7 @@ cdef class UpdatingQT:
         # A row of zeros makes this possible while still having self.k match the relevant dimension
         # of Q_t.  The update_qt method takes care of adding the zeros if dependent. Note this means
         # that in general self.householder.k <= self.k.  They are not necessarily equal.
-        self.update_qt(dependent)
+        self.update_qt(dependent) 
 
 
 
@@ -124,6 +126,7 @@ cdef class Householder:
         cdef int incx = c.strides[0] / c.itemsize
         cdef FLOAT_t * y = <FLOAT_t *> &(self.V[0, self.k])
         cdef int incy = 1
+
         dcopy(&N, x, &incx, y, &incy)
 
         # Apply self to new column in V
@@ -176,9 +179,11 @@ cdef class Householder:
         cdef FLOAT_t * T = <FLOAT_t *> &(self.T[0,0])
         cdef FLOAT_t * tau_arg = <FLOAT_t *> &(self.tau[0])
         cdef int ldt = self.max_n
+        #print("Updating VT (k+=1)")
         dlarft(&direct, &storev, &n, &k, V, &ldv, tau_arg, T, &ldt)
 
         self.k += 1
+        #print("Done updating VT")
         # Return beta in case the caller wants to diagnose linear dependence.
         return dependent
 
@@ -198,7 +203,7 @@ cdef class Householder:
         cdef int ldc = C.strides[1] // C.itemsize
         cdef FLOAT_t * work = <FLOAT_t *> &(self.work[0,0])
         cdef int ldwork = self.m
-        print(C.shape)
+
         dlarfb(&side, &trans, &direct, &storev, &M, &N, &K,
                V, &ldv, T, &ldt, C_arg, &ldc, work, &ldwork)
 
@@ -219,6 +224,11 @@ cdef class Householder:
         cdef FLOAT_t * work = <FLOAT_t *> &(self.work[0,0])
         cdef int ldwork = self.m
 
+        '''
+        print("Left apply transposing: ")
+        print("N (6): ", N) #Equal to length of data??
+        print("K (7): ", K) #number of transposes finished
+        '''
         dlarfb(&side, &trans, &direct, &storev, &M, &N, &K,
                V, &ldv, T, &ldt, C_arg, &ldc, work, &ldwork)
 
@@ -259,6 +269,18 @@ cdef class Householder:
         cdef FLOAT_t * work = <FLOAT_t *> &(self.work[0,0])
         cdef int ldwork = self.m
 
+        '''
+        print("about to right_apply_transpose")
+        print("Printing parameters (9, 11, or 13 are the problem): ")
+        print("M (5): ", M) #always 1?
+        print("N (6): ", N) #Equal to length of data??
+        print("K (7): ", K) #number of transposes finished
+        print("ldv (9): ", ldv) # Rows 
+        print("ldc (11): ", ldc) # Columns
+        print("ldwork (13): ", ldwork) # Rows??
+        '''
+
+        # Runs into errors when K > ldv/N/ldwork
+        #if K <= N:
         dlarfb(&side, &trans, &direct, &storev, &M, &N, &K,
-               V, &ldv, T, &ldt, C_arg, &ldc, work, &ldwork)
-#
+            V, &ldv, T, &ldt, C_arg, &ldc, work, &ldwork)

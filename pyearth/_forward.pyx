@@ -81,7 +81,11 @@ cdef class ForwardPasser:
         self.minspan       = kwargs.get('minspan', -1)
         self.endspan_alpha = kwargs.get('endspan_alpha', .05)
         self.minspan_alpha = kwargs.get('minspan_alpha', .05)
-        self.max_terms     = kwargs.get('max_terms', min(2 * self.n + self.m // 10, 400))
+        #self.max_terms     = kwargs.get('max_terms', min(2 * self.n + self.m // 10, 400))
+        #ERROR: This is potentially a big change
+        # My thought, why would you want more max terms than the number of observations?
+        # Cuz at that point by DOF you have hit every point exactly, any more terms unneccesary. 
+        self.max_terms     = kwargs.get('max_terms', min(self.m, 400))
         self.allow_linear  = kwargs.get('allow_linear', True)
         self.max_degree    = kwargs.get('max_degree', 1)
         self.thresh        = kwargs.get('thresh', 0.001)
@@ -209,6 +213,7 @@ cdef class ForwardPasser:
 
         if self.max_terms <= len(self.basis):
             # We done!
+            print("Finished cuz MAX TERMS")
             return
         if self.max_terms > 1 and self.record.mse(0) != 0.:
             while True:
@@ -230,6 +235,22 @@ cdef class ForwardPasser:
 
     cdef stop_check(ForwardPasser self):
         last = self.record.__len__() - 1
+        '''
+        print("last: ", last)
+        print("self.record.iterations[last].get_size(): ", self.record.iterations[last].get_size())
+        print("len(self.basis)", len(self.basis))
+        print(self.record)
+        print(self.basis)
+        print(self.X)
+        print(self.max_terms)
+        '''
+        assert self.record.iterations[last].get_size() == len(self.basis)
+        
+        #** ERROR: I changed this to be greater than or equal to because I was getting errors
+        # where it would keep orthonormal updating with 2 terms and 1 datapoint
+        #if self.record.iterations[last].get_size() >= self.max_terms:
+
+        #This is original for now::
         if self.record.iterations[last].get_size() > self.max_terms:
             self.record.stopping_condition = MAXTERMS
             return True
@@ -242,6 +263,7 @@ cdef class ForwardPasser:
             if rsq - previous_rsq < self.thresh:
                 self.record.stopping_condition = NOIMPRV
                 return True
+        
         if self.record.grsq(last) < -10:
             self.record.stopping_condition = LOWGRSQ
             return True
@@ -300,8 +322,6 @@ cdef class ForwardPasser:
         model2 = LinearRegression(fit_intercept = False)
 
         for variable in range(self.n):
-
-
             #np.random.seed(seed = 1)
             #print("about to make quantiles")
             #Quantiles = [np.quantile(self.X[:, variable], q=0), np.quantile(self.X[:, variable], q=0.1), np.quantile(self.X[:, variable], q=0.2), np.quantile(self.X[:, variable], q=0.3), np.quantile(self.X[:, variable], q=0.4), np.quantile(self.X[:, variable], q=0.5), np.quantile(self.X[:, variable], q=0.6), np.quantile(self.X[:, variable], q=0.7), np.quantile(self.X[:, variable], q=0.8), np.quantile(self.X[:, variable], q=0.9)]
@@ -309,8 +329,6 @@ cdef class ForwardPasser:
             #print("about to print quantiles")
             #print(Quantiles)
             #print(np.unique(Quantiles))
-
-            
             for split_val in np.unique(self.X[:, variable])[:-1]:
             #Error: For some reason looping through the quantiles makes it crash
             # but looping through everything doesn't???
@@ -811,45 +829,34 @@ cdef class ForwardPasser:
             raise ValueError("WOULD HAVE FAILED!")
         if len(forward2_optimal.basis) > len(forward2_optimal.B[0]):
             raise ValueError("WOULD HAVE FAILED!")
-        '''
-        file1 = open("/Users/WilliamJamesonPattie_/Desktop/Cool Text", "a")
-        file1.write("About to orthonormal update\n")
-        file1.write("Forward1 basis length: " + str(len(forward1_optimal.basis)) + "\n")
-        file1.write("Forward1 max_terms: " + str(forward1_optimal.max_terms) + "\n")
-        file1.write("Forward2 basis length: " + str(len(forward2_optimal.basis)) + "\n")
-        file1.write("Forward2 max_terms: " + str(forward2_optimal.max_terms) + "\n")
-        '''
+
         
-        for i in range(0, len(forward1_optimal.basis)):
-            try: 
+        print("###About to orthonormal_update 1")
+        print("len(forward1_optimal.B)", len(forward1_optimal.B))
+        print("len(forward1_optimal.B[0])", len(forward1_optimal.B[0]))
+        for i in range(1, len(forward1_optimal.basis)):
+            print("i: ", i)
+            for j in range(0, len(forward1_optimal.outcome.outcomes)):
+                print("k: ", forward1_optimal.outcome.outcomes[j].k)
+            #print(forward1_optimal.outcome.outcomes[0].k)
+            if i < len(forward1_optimal.B):
                 forward1_optimal.orthonormal_update(forward1_optimal.B[:, i])
-            except Exception as e:
-                print("Exception occurred:", e)
-        for i in range(0, len(forward2_optimal.basis)):
-            try: 
+        print("###About to orthonormal_update 2")
+        print("len(forward2_optimal.B)", len(forward2_optimal.B))
+        print("len(forward2_optimal.B[0])", len(forward2_optimal.B[0]))
+        for i in range(1, len(forward2_optimal.basis)):
+            print("i: ", i)
+            for j in range(0, len(forward2_optimal.outcome.outcomes)):
+                print("k: ", forward2_optimal.outcome.outcomes[j].k)
+            # Don't apply more bases than rows
+            if i < len(forward2_optimal.B):
                 forward2_optimal.orthonormal_update(forward2_optimal.B[:, i])
-            except Exception as e:
-                print("Exception occurred:", e)
+        print("###DONE ORTHONORMAL UPDATING")
         
         
-        #forward1_optimal.record = copy.deepcopy(self.record)
-        #forward2_optimal.record = copy.deepcopy(self.record)
-        '''
-        file1.write("Done with orthonormal update\n")
-        file1.close()
-        '''
-
-        #forward1_optimal.orthonormal_update(forward1_optimal.B[:, len(self.basis)])
-        #for i in range(0, len(forward2_optimal.basis) ): #+ 1):
-            #if i > len(forward2_optimal.B[0])-1:
-            #    print("WOULD HAVE GOTTEN OUT OF BOUNDS ERROR!!")
-            #    print(i)
-            #    print(len(forward2_optimal.basis))
-            #    print(forward2_optimal.B)
-            #else:
-
-        # I don't understand why AT ALL but maybe this works??
-        #forward2_optimal.orthonormal_update(forward2_optimal.B[:, len(self.basis)])
+        # About to update record
+        forward1_optimal.record = copy.deepcopy(self.record)
+        forward2_optimal.record = copy.deepcopy(self.record)
 
         return forward1_optimal, forward2_optimal
 
